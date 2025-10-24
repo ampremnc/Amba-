@@ -1,40 +1,42 @@
--- Headless Ultra-Minimizer for multi-instance cloud (safe)
--- Execute with Codex (or any executor that supports client-side Luau).
--- PURPOSE: reduce rendering, disable effects/particles/sounds, hide GUI -> lower bandwidth & CPU/GPU usage.
+--// Performance Safe Mode + Dark Screen
+--// Aman & stabil untuk cloud multi-instance
 
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local Lighting = game:GetService("Lighting")
-local Workspace = game:GetService("Workspace")
-local StarterGui = game:GetService("StarterGui")
-local SoundService = game:GetService("SoundService")
+task.wait(5) -- delay biar semua elemen kebuka dulu
 
--- CONFIG
-local REAPPLY_INTERVAL = 8        -- seconds, re-apply settings to catch newly spawned effects
-local TARGET_FPS = 30             -- target FPS hint (not guaranteed)
-local HIDE_ALL_GUI = true         -- hide scoreboard / chat / other GUIs
-local DISABLE_SOUNDS = true
-local DISABLE_PARTICLES = true
-local DISABLE_TRAILS = true
-local HIDE_DECALS_TEXTURES = true
-local DISABLE_POSTPROCESS = true
-local DISABLE_SHADOWS = true
+-- Matikan efek berat
+settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+game.Lighting.GlobalShadows = false
+game.Lighting.Brightness = 0
+game.Lighting.FogEnd = 25
+game.Lighting.FogStart = 0
+game.Lighting.ClockTime = 0
+game.Lighting.ExposureCompensation = -3
 
--- Safe helper wrappers
-local function safe(fn, ...)
-    local ok, res = pcall(fn, ...)
-    return ok, res
+-- Matikan partikel & efek berat
+for _, v in pairs(game:GetDescendants()) do
+    if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") then
+        v.Enabled = false
+    elseif v:IsA("PointLight") or v:IsA("SpotLight") or v:IsA("SurfaceLight") then
+        v.Enabled = false
+    end
 end
 
--- Try set UserGameSettings / Graphics low
-local function applyUserSettings()
-    safe(function()
-        local usuccess, UserSettingsObj = pcall(function() return UserSettings() end)
-        if not usuccess or not UserSettingsObj then return end
+-- Tambahkan lapisan hitam transparan di atas layar (tanpa matiin GUI)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Name = "DarkOverlay"
 
-        local ugsuccess, UserGameSettings = pcall(function() return UserSettingsObj:GetService("UserGameSettings") end)
-        if not ugsuccess or not UserGameSettings then return end
+local BlackFrame = Instance.new("Frame")
+BlackFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+BlackFrame.Size = UDim2.new(1, 0, 1, 0)
+BlackFrame.BorderSizePixel = 0
+BlackFrame.BackgroundTransparency = 0  -- 0 = hitam pekat, 0.5 = agak transparan
 
+BlackFrame.Parent = ScreenGui
+ScreenGui.Parent = game:GetService("CoreGui")
+
+print("[Performance Mode Active] ✅ Semua efek dimatikan, layar diset gelap.")
         -- Try multiple possible API names
         pcall(function()
             if UserGameSettings.SetGraphicsQualityLevel then
